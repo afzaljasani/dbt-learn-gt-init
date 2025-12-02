@@ -42,7 +42,5 @@ models:
 vars: 
   fivetran_platform_using_destination_membership: false
   fivetran_platform_using_user: false
-  fivetran_platform_using_connection: false
-  stg_fivetran_platform__destination_membership: false
-  fivetran_platform_database: SNOWFLAKE_DEMO_01 # default is your target.database
+  fivetran_platform_database: AFZAL_JASANI # default is your target.database
   fivetran_platform_schema: FIVETRAN_LOG # default is fivetran_log
