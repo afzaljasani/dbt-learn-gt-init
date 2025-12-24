@@ -1,0 +1,85 @@
+name: 'fivetran_log_integration_tests'
+version: '2.5.0'
+
+config-version: 2
+profile: 'integration_tests'
+
+dispatch:
+  - macro_namespace: dbt_utils
+    search_order: ['spark_utils', 'dbt_utils']
+
+vars:
+  fivetran_log:
+    fivetran_platform_schema: "fivetran_platform_integration_tests"
+    fivetran_platform_account_identifier: "account"
+    fivetran_platform_incremental_mar_identifier: "incremental_mar"
+    fivetran_platform_connection_identifier: "connection"
+    fivetran_platform_connector_identifier: "connector"
+    fivetran_platform_credits_used_identifier: "credits_used"
+    fivetran_platform_usage_cost_identifier: "usage_cost"
+    fivetran_platform_destination_identifier: "destination"
+    fivetran_platform_destination_membership_identifier: "destination_membership"
+    fivetran_platform_log_identifier: "log"
+    fivetran_platform_user_identifier: "user"
+    fivetran_platform_transformation_runs_identifier: "transformation_runs"
+
+models:
+  fivetran_log:
+    +schema: "{{ 'sqlw_tests_4' if target.name == 'databricks-sql' else 'fivetran_platform' }}"
+    # +schema: "fivetran_platform_{{ var('directed_schema','dev') }}"
+
+seeds:
+  +docs:
+    show: False
+  fivetran_log_integration_tests:
+    +column_types:
+      _fivetran_synced: "{{ 'datetime2' if target.type == 'sqlserver' else 'timestamp' }}"
+    account:
+      +column_types:
+        created_at: "{{ 'datetime2' if target.type == 'sqlserver' else 'timestamp' }}"
+    incremental_mar:
+      +column_types:
+        measured_date: "{{ 'datetime2' if target.type == 'sqlserver' else 'timestamp' }}"
+        incremental_rows: "{{ 'int64' if target.type == 'bigquery' else 'bigint' }}"
+    connection:
+      +column_types:
+        signed_up: "{{ 'datetime2' if target.type == 'sqlserver' else 'timestamp' }}"
+        _fivetran_deleted: "{{ 'bit' if target.type == 'sqlserver' else 'boolean' }}"
+    connector:
+      +column_types:
+        signed_up: "{{ 'datetime2' if target.type == 'sqlserver' else 'timestamp' }}"
+        _fivetran_deleted: "{{ 'bit' if target.type == 'sqlserver' else 'boolean' }}"
+    credits_used:
+      +column_types:
+        credits_consumed: "{{ 'int64' if target.type == 'bigquery' else 'bigint' }}"
+    destination:
+      +column_types:
+        created_at: "{{ 'datetime2' if target.type == 'sqlserver' else 'timestamp' }}"
+        id: "{{ 'string' if target.type in ('bigquery', 'spark', 'databricks') else 'varchar' if target.type != 'sqlserver' else 'varchar(256)' }}"
+    destination_membership:
+      +column_types:
+        activated_at: "{{ 'datetime2' if target.type == 'sqlserver' else 'timestamp' }}"
+        joined_at: "{{ 'datetime2' if target.type == 'sqlserver' else 'timestamp' }}"
+    log:
+      +column_types:
+        time_stamp: "{{ 'datetime2' if target.type == 'sqlserver' else 'timestamp' }}"
+        message_data: "{{ 'string' if target.type in ('bigquery', 'spark', 'databricks') else 'varchar' if target.type != 'sqlserver' else 'varchar(256)' }}"
+        transformation_id:  "{{ 'string' if target.type in ('bigquery', 'spark', 'databricks') else 'varchar' if target.type != 'sqlserver' else 'varchar(256)' }}"
+    log_bq_json_data:
+      +enabled: "{{ target.type == 'bigquery' }}"
+      +column_types:
+        time_stamp: timestamp
+        message_data: json
+        transformation_id: string
+    user:
+      +column_types:
+        created_at: "{{ 'datetime2' if target.type == 'sqlserver' else 'timestamp' }}"
+
+clean-targets:         # directories to be removed by `dbt clean`
+  - "target"
+  - "dbt_packages"
+  - "dbt_modules"
+
+flags:
+  send_anonymous_usage_stats: False
+  use_colors: True

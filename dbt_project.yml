@@ -5,6 +5,9 @@ name: 'jaffle_shop'
 version: '1.0.0'
 config-version: 2
 
+dbt-cloud:
+    project-id: 468331
+
 # This setting configures which "profile" dbt uses for this project.
 profile: 'default'
 
@@ -21,7 +24,7 @@ snapshot-paths: ["snapshots"]
 target-path: "target"  # directory which will store compiled SQL files
 clean-targets:         # directories to be removed by `dbt clean`
     - "target"
-    - "dbt_modules"
+    - "dbt_packages"
 
 
 # Configuring models

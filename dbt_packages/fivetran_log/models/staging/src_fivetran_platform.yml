@@ -1,0 +1,271 @@
+version: 2
+
+sources: 
+  - name: fivetran_platform
+    database: "{% if target.type not in ('spark') %}{{ var('fivetran_platform_database', target.database) }}{% endif %}"
+    schema: "{{ var('fivetran_platform_schema', 'fivetran_log')}}"
+
+    loader: fivetran
+
+    config:
+      loaded_at_field: _fivetran_synced
+      freshness:
+        warn_after: {count: 72, period: hour}
+        error_after: {count: 96, period: hour}
+
+    tables:
+      - name: incremental_mar
+        identifier: "{{ var('fivetran_platform_incremental_mar_identifier', 'incremental_mar')}}"
+        description: >
+          Table of monthly active row (MAR) measurements recorded per table and date.
+          Each measurement is cumulative for the month and includes all MAR types (paid, free, etc.).
+        columns:
+          - name: connector_id
+            description: >
+              (DEPRECATED) The *name* of the measured connection. This column has been deprecated and replaced with `connection_name` for
+              connectors created after July 2024, however this column but may still be present in older Fivetran Platform connectors.
+          - name: connection_name
+            description: The name of the measured connection.
+          - name: connector_name
+            description: (DEPRECATED) The name of the measured connection. Refer to `connection_name` instead.
+          - name: destination_id
+            description: Foreign key referencing the destination of the measured table.
+          - name: free_type
+            description: Indicates the type of free MAR, or `PAID` for paid MAR.
+          - name: measured_date
+            description: Timestamp when the MAR measurement was recorded.
+          - name: incremental_rows
+            description: The number of new distinct primary keys synced for the connection on the given day.
+          - name: sync_type
+            description: >
+              Indicates whether the MAR calculation is based on a historical or incremental sync. 
+              Possible values include `HISTORICAL`, `INCREMENTAL`, and `UNKNOWN`.
+          - name: schema_name
+            description: Name of the schema containing the measured table.
+          - name: table_name
+            description: Name of the table for which MAR was measured.
+          - name: updated_at
+            description: Timestamp when the record was last updated.
+          - name: _fivetran_synced
+            description: Timestamp when the record was last synced.
+
+      - name: connection
+        identifier: "{{ var('fivetran_platform_connection_identifier', 'connection')}}"
+        description: >
+          Table of all connections loading data into destinations.
+        config:
+          enabled: "{{ var('fivetran_platform_using_connection', true) }}"
+          freshness: null
+        columns: 
+          - name: connection_id
+            description: System-generated unique ID of the connection.
+          - name: connecting_user_id
+            description: Foreign key referencing the user who set up the connection.
+          - name: connection_name
+            description: Name of the connection. This may differ from `incremental_mar.schema_name`.
+            # Other tables lack a true `connection_id` and will have to join with `connection_name`
+          - name: connector_type
+            description: Type of connection (e.g., Google Sheets, Webhooks).
+          - name: destination_id
+            description: Foreign key referencing the destination receiving data from the connection.
+          - name: paused
+            description: Boolean indicating whether the connection's sync is currently paused.
+          - name: signed_up
+            description: Timestamp when the connector was set up.
+          - name: _fivetran_synced
+            description: Timestamp of when the record was last synced.
+          - name: _fivetran_deleted
+            description: Boolean if the record is deleted.
+
+      - name: connector
+        identifier: "{{ var('fivetran_platform_connector_identifier', 'connector')}}"
+        description: >
+          (DEPRECATED) Table of all connections loading data into destinations.
+          Note: This table is deprecated in favor of CONNECTION and will be removed at a later date.
+        config:
+          enabled: "{{ false if var('fivetran_platform_using_connection', true) else true }}"
+          freshness: null
+        columns: 
+          - name: connector_id
+            description: System-generated unique ID of the connection. 
+          - name: connecting_user_id
+            description: Foreign key referencing the user who set up the connection.
+          - name: connector_name
+            description: Name of the connection. This may differ from `incremental_mar.schema_name`.
+            # Other tables lack a true `connection_id` and will have to join with `connection_name`
+          - name: connector_type
+            description: Type of connection (e.g., Google Sheets, Webhooks).
+          - name: destination_id
+            description: Foreign key referencing the destination receiving data from the connection.
+          - name: paused
+            description: Boolean indicating whether the connection's sync is currently paused.
+          - name: signed_up
+            description: Timestamp when the connector was set up.
+          - name: _fivetran_synced
+            description: Timestamp of when the record was last synced.
+          - name: _fivetran_deleted
+            description: Boolean if the record is deleted.
+
+      - name: credits_used
+        identifier: "{{ var('fivetran_platform_credits_used_identifier', 'credits_used')}}"
+        description: Table of credits used by the customer per month within each destination.
+        config:
+          freshness: null
+        columns:
+          - name: destination_id
+            description: Foreign key referencing the destination where credits were used.
+          - name: measured_month
+            description: Month when the credits were consumed, formatted as `YYYY-MM`.
+          - name: credits_consumed
+            description: The number of credits used by the destination in the given month.
+          - name: _fivetran_synced
+            description: Timestamp when the record was last synced.
+
+      - name: usage_cost
+        identifier: "{{ var('fivetran_platform_usage_cost_identifier', 'usage_cost')}}"
+        description: Table of usage costs per destination and month.
+        config:
+          freshness: null
+        columns:
+          - name: destination_id
+            description: Foreign key referencing the destination where costs were incurred.
+          - name: measured_month
+            description: Month when the costs were incurred, formatted as `YYYY-MM`.
+          - name: amount
+            description: The dollar amount associated with connection usage.
+          - name: _fivetran_synced
+            description: Timestamp when the record was last synced.
+
+      - name: destination
+        identifier: "{{ var('fivetran_platform_destination_identifier', 'destination')}}"
+        description: Table of destinations receiving data. Each declared source has one record.
+        config:
+          freshness: null
+        columns:
+          - name: id
+            description: Unique ID of the destination.
+          - name: account_id
+            description: Foreign key referencing the Fivetran account associated with the destination.
+          - name: created_at
+            description: Timestamp when the destination was set up.
+          - name: name
+            description: Name of the destination.
+          - name: region
+            description: Geographical region of the destination.
+          - name: _fivetran_synced
+            description: Timestamp when the record was last synced.
+
+      - name: log
+        identifier: "{{ var('fivetran_platform_log_identifier', 'log')}}"
+        description: Table of logged events related to data syncs. More info on error logs [here](https://fivetran.com/docs/logs/fivetran-log#errorlogs).
+        columns:
+          - name: id 
+            description: Unique ID of the log.
+          - name: time_stamp
+            description: Timestamp when the event was logged.
+          - name: connection_id 
+            description: ID of the logged connection.
+          - name: connector_id 
+            description: (DEPRECATED) ID of the logged connection. Refer to `connection_id` instead.
+          - name: event
+            description: High-level event category. Possible values include `WARNING`, `ERROR`, and `INFO`.
+          - name: message_data  
+            description: The details of the event in a JSON-like string format.
+          - name: message_event
+            description: The routine involved in the log event, defined [here](https://fivetran.com/docs/logs#logevents).
+          - name: transformation_id
+            description: Foreign key referencing the transformation if the event is related to a transformation run.
+          - name: sync_id
+            description: Identifies which sync the event is associated with.
+          - name: _fivetran_synced
+            description: Timestamp when the record was last synced.
+
+      - name: account
+        identifier: "{{ var('fivetran_platform_account_identifier', 'account')}}"
+        description: Table of information about this Fivetran account.
+        config:
+          freshness: null
+        columns:
+          - name: id
+            description: Unique ID of the account.
+          - name: country
+            description: Country associated with the account.
+          - name: created_at
+            description: Timestamp when the account was created.
+          - name: name
+            description: Name of the Fivetran account.
+          - name: status
+            description: Account status (e.g., `trial`, `frozen`).
+          - name: _fivetran_synced
+            description: Timestamp when the record was last synced.
+
+      - name: destination_membership
+        identifier: "{{ var('fivetran_platform_destination_membership_identifier', 'destination_membership')}}"
+        description: Table of users with access to a destination.
+        config:
+          enabled: "{{ var('fivetran_platform_using_destination_membership', true) }}"
+          freshness: null
+        columns:
+          - name: destination_id
+            description: Foreign key referencing the destination to which the user belongs.
+          - name: user_id
+            description: Foreign key referencing the user with access to the destination.
+          - name: activated_at
+            description: Timestamp when the user was activated in the destination.
+          - name: joined_at
+            description: Timestamp when the user was added to the destination.
+          - name: role
+            description: The user's permissions for this individual destination.
+          - name: _fivetran_synced
+            description: Timestamp when the record was last synced.
+
+      - name: user
+        identifier: "{{ var('fivetran_platform_user_identifier', 'user')}}"
+        description: Table of users with access to this Fivetran account.
+        config:
+          enabled: "{{ var('fivetran_platform_using_user', true) }}"
+          freshness: null
+        columns:
+          - name: id
+            description: Unique ID of the user's account.
+          - name: created_at
+            description: Timestamp when the user was created.
+          - name: email
+            description: Email associated with the user.
+          - name: email_disabled
+            description: Boolean indicating whether the user has disabled all email notifications.
+          - name: family_name
+            description: User's last name.
+          - name: given_name
+            description: User's first name.
+          - name: phone
+            description: Phone number associated with the user.
+          - name: verified 
+            description: Boolean indicating whether the user has verified their email address.
+          - name: _fivetran_synced
+            description: Timestamp when the record was last synced.
+
+      - name: transformation_runs
+        identifier: "{{ var('fivetran_platform_transformation_runs_identifier', 'transformation_runs') }}"
+        description: Table of all transformation runs executed by Fivetran.
+        config:
+          freshness: null
+        columns:
+          - name: destination_id
+            description: Foreign key referencing the destination where the transformation run was executed.
+          - name: job_id
+            description: Unique key referencing the job associated with the transformation run.
+          - name: measured_date
+            description: Date in UTC when the transformation was executed.
+          - name: project_type
+            description: Type of transformation project (e.g., `DBT_CORE`, `QUICKSTART`).
+          - name: free_type
+            description: Indicates the type of free model run, or `PAID` for paid model runs.
+          - name: job_name
+            description: Name of the transformation job that was executed.
+          - name: updated_at
+            description: Timestamp when the record was last updated.
+          - name: model_runs
+            description: Number of models run during the transformation.
+          - name: _fivetran_synced
+            description: Timestamp when the record was last synced.

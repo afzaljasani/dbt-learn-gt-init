@@ -1,0 +1,10 @@
+snapshots:
+  - name: order_snapshots
+    relation: source('jaffle_shop', 'orders')
+    config:
+      schema: snapshots
+      strategy: timestamp
+      unique_key: id
+      updated_at: order_date
+      dbt_valid_to_current: "to_date('9999-12-31')"
+      hard_deletes: ignore
