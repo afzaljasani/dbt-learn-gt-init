@@ -1,0 +1,10 @@
+
+models:
+  - name: fct_orders
+    columns:
+      - name: amount
+        data_tests:
+          - average_dollars_spent_greater_than_one:
+              arguments:
+                group_by_column: customer_id
+

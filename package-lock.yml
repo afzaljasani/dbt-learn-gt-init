@@ -1,14 +1,26 @@
 packages:
-  - name: fivetran_log
-    package: fivetran/fivetran_log
-    version: 2.5.0
-  - name: dbt_utils
-    package: dbt-labs/dbt_utils
-    version: 1.3.2
-  - name: fivetran_utils
-    package: fivetran/fivetran_utils
-    version: 0.4.11
-  - name: spark_utils
-    package: dbt-labs/spark_utils
-    version: 0.3.2
-sha1_hash: 668c02a259622acaab290312a8760be8a57459df
+- package: dbt-labs/audit_helper
+  name: audit_helper
+  version: 0.12.2
+- package: godatadriven/dbt_date
+  name: dbt_date
+  version: 0.17.0
+- package: metaplane/dbt_expectations
+  name: dbt_expectations
+  version: 0.10.10
+- package: tnightengale/dbt_meta_testing
+  name: dbt_meta_testing
+  version: 0.3.6
+- package: dbt-labs/dbt_utils
+  name: dbt_utils
+  version: 1.3.2
+- package: fivetran/fivetran_log
+  name: fivetran_log
+  version: 2.5.0
+- package: fivetran/fivetran_utils
+  name: fivetran_utils
+  version: 0.4.11
+- package: dbt-labs/spark_utils
+  name: spark_utils
+  version: 0.3.3
+sha1_hash: d5937c432033aab3e442c02c5318a17187837e57
